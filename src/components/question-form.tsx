@@ -1,4 +1,5 @@
 import { zodResolver } from '@hookform/resolvers/zod';
+import { Loader2Icon } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { Button } from '@/components/ui/button';
@@ -18,6 +19,7 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { Textarea } from '@/components/ui/textarea';
+import { useCreateQuestion } from '@/http/use-create-question';
 
 const createQuestionSchema = z.object({
   question: z
@@ -34,17 +36,21 @@ interface QuestionFormProps {
 }
 
 export function QuestionForm({ roomId }: QuestionFormProps) {
-  const form = useForm<CreateQuestionFormData>({
+  const { mutateAsync: createQuestion } = useCreateQuestion(roomId);
+
+  const createQuestionForm = useForm<CreateQuestionFormData>({
     resolver: zodResolver(createQuestionSchema),
     defaultValues: {
       question: '',
     },
   });
 
-  function handleCreateQuestion(data: CreateQuestionFormData) {
-    // biome-ignore lint/suspicious/noConsole: dev
-    console.log(data, roomId);
+  async function handleCreateQuestion({ question }: CreateQuestionFormData) {
+    await createQuestion({ question });
+    createQuestionForm.reset();
   }
+
+  const { isSubmitting } = createQuestionForm.formState;
 
   return (
     <Card>
@@ -55,13 +61,13 @@ export function QuestionForm({ roomId }: QuestionFormProps) {
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <Form {...form}>
+        <Form {...createQuestionForm}>
           <form
             className="flex flex-col gap-4"
-            onSubmit={form.handleSubmit(handleCreateQuestion)}
+            onSubmit={createQuestionForm.handleSubmit(handleCreateQuestion)}
           >
             <FormField
-              control={form.control}
+              control={createQuestionForm.control}
               name="question"
               render={({ field }) => (
                 <FormItem>
@@ -69,6 +75,7 @@ export function QuestionForm({ roomId }: QuestionFormProps) {
                   <FormControl>
                     <Textarea
                       className="min-h-[100px]"
+                      disabled={isSubmitting}
                       placeholder="O que você gostaria de saber?"
                       {...field}
                     />
@@ -78,7 +85,12 @@ export function QuestionForm({ roomId }: QuestionFormProps) {
               )}
             />
 
-            <Button className="hover:cursor-pointer" type="submit">
+            <Button
+              className="hover:cursor-pointer"
+              disabled={isSubmitting}
+              type="submit"
+            >
+              {isSubmitting && <Loader2Icon className="animate-spin" />}
               Enviar pergunta
             </Button>
           </form>
